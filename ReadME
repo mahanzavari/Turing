@@ -73,7 +73,7 @@ The script can be run in several ways, from fully interactive to direct command-
 
 To see all available options, use the `-h` or `--help` flag:
 ```bash
-python turing_machine.py -h
+python Turing.py -h
 ```
 ```
 usage: turing_machine.py [-h] [-v] [-d DELAY] [-s {fancy,compact}] [-q] [input_string]
