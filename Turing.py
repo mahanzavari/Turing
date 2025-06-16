@@ -1,10 +1,11 @@
 import time
 import os
-
+import tkinter as tk
+from tkinter import font , messagebox
 class TuringMachine:
     """
     A class to simulate a Turing Machine for palindrome checking.
-    The machine checks if a string from the alphabet {a, b} is a palindrome.
+    The machine's logic is separated from the GUI.
     """
 
     def __init__(self):
@@ -13,8 +14,6 @@ class TuringMachine:
         """
         self.blank_symbol = 'B'
         self.halt_state = 'q_halt'
-        # The transition function is defined as a dictionary.
-        # Format: { 'state': { 'read_symbol': { 'newState': ..., 'write': ..., 'move': ... } } }
         self.transitions = {
             'q0': {
                 'a': {'newState': 'q1', 'write': self.blank_symbol, 'move': 'R'},
@@ -62,115 +61,173 @@ class TuringMachine:
             'qn1': {self.blank_symbol: {'newState': 'qn2', 'write': 'N', 'move': 'R'}},
             'qn2': {self.blank_symbol: {'newState': self.halt_state, 'write': 'O', 'move': 'S'}}
         }
-        # Machine's dynamic state
         self.tape = {}
         self.head_position = 0
         self.current_state = 'q0'
         self.step_count = 0
 
-    def _display_tape(self, tape_width=40):
-        """Helper function to print the current state of the tape."""
-        os.system('cls' if os.name == 'nt' else 'clear')
-        
-        # Determine the range of the tape to display
-        tape_indices = sorted(self.tape.keys())
-        min_idx = min(tape_indices) if tape_indices else 0
-        max_idx = max(tape_indices) if tape_indices else 0
-        start = min(self.head_position - tape_width // 2, min_idx - 2)
-        end = max(self.head_position + tape_width // 2, max_idx + 2)
-
-        # Build tape string
-        tape_str = ""
-        head_str = ""
-        for i in range(start, end + 1):
-            symbol = self.tape.get(i, self.blank_symbol)
-            tape_str += f" {symbol} "
-            if i == self.head_position:
-                head_str += " ^ "
-            else:
-                head_str += "   "
-        
-        print(f"State: {self.current_state:<10} Step: {self.step_count}")
-        print("-" * (len(tape_str)))
-        print(tape_str)
-        print(head_str)
-        print("-" * (len(tape_str)))
-
-    def run(self, input_string, verbose=False, delay=0.1):
-        """
-        Runs the Turing Machine on a given input string.
-
-        Args:
-            input_string (str): The string to process.
-            verbose (bool): If True, prints the state of the machine at each step.
-            delay (float): Delay in seconds between steps when verbose is True.
-        
-        Returns:
-            str: The final content of the tape after halting.
-        """
-        # --- 1. Initialization ---
-        # Validate input
-        if not all(c in 'ab' for c in input_string):
-            return "Error: Input string contains invalid characters."
-
-        # Reset machine state for a new run
+    def initialize(self, input_string):
+        """Resets the machine's state for a new run."""
         self.tape = {i: char for i, char in enumerate(input_string)}
         self.head_position = 0
         self.current_state = 'q0'
         self.step_count = 0
+        return all(c in 'ab' for c in input_string)
 
-        if verbose:
-            self._display_tape()
-            time.sleep(delay)
+    def step(self):
+        """Performs a single step of the Turing Machine computation."""
+        if self.current_state == self.halt_state:
+            return False
 
-        # --- 2. Execution Loop ---
-        while self.current_state != self.halt_state:
-            # Read the symbol under the tape head
-            read_symbol = self.tape.get(self.head_position, self.blank_symbol)
-
-            # Find the transition rule for the current state and symbol
-            if self.current_state not in self.transitions or read_symbol not in self.transitions[self.current_state]:
-                print(f"Error: No transition for state '{self.current_state}' and symbol '{read_symbol}'")
-                break
-            
-            rule = self.transitions[self.current_state][read_symbol]
-            
-            # --- 3. Apply Transition Rule ---
-            # Write the new symbol to the tape
-            self.tape[self.head_position] = rule['write']
-            
-            # Move the head
-            if rule['move'] == 'R':
-                self.head_position += 1
-            elif rule['move'] == 'L':
-                self.head_position -= 1
-            # 'S' (Stay) means no change in head position
-            
-            # Update the current state
-            self.current_state = rule['newState']
-            self.step_count += 1
-
-            if verbose:
-                self._display_tape()
-                time.sleep(delay)
-
-        # --- 4. Final Result ---
-        # Sort keys to read the tape in order
-        sorted_keys = sorted(self.tape.keys())
-        final_tape_content = "".join(self.tape[key] for key in sorted_keys if self.tape[key] != self.blank_symbol)
+        read_symbol = self.tape.get(self.head_position, self.blank_symbol)
         
-        return final_tape_content
+        if self.current_state not in self.transitions or read_symbol not in self.transitions[self.current_state]:
+            # This case indicates an incomplete transition function, which is an error.
+            print(f"Error: No transition for state '{self.current_state}' and symbol '{read_symbol}'")
+            self.current_state = self.halt_state # Force halt on error
+            return False
 
-# --- Main execution block ---
+        rule = self.transitions[self.current_state][read_symbol]
+        
+        # Apply the transition rule
+        self.tape[self.head_position] = rule['write']
+        if rule['move'] == 'R':
+            self.head_position += 1
+        elif rule['move'] == 'L':
+            self.head_position -= 1
+        
+        self.current_state = rule['newState']
+        self.step_count += 1
+        
+        return self.current_state != self.halt_state
+
+
+class TuringMachineGUI:
+    def __init__(self, master):
+        self.master = master
+        self.master.title("Turing Machine Palindrome Checker")
+        self.master.geometry("800x450")
+        
+        self.tm = TuringMachine()
+        self.simulation_id = None
+        self.cell_width = 40
+        self.cell_height = 40
+
+        # Define fonts
+        self.control_font = font.Font(family="Helvetica", size=10)
+        self.tape_font = font.Font(family="Courier New", size=14, weight="bold")
+        self.status_font = font.Font(family="Helvetica", size=12, weight="bold")
+
+        # --- Setup Widgets ---
+        self.setup_widgets()
+
+    def setup_widgets(self):
+        # --- Control Frame ---
+        control_frame = tk.Frame(self.master, pady=10)
+        control_frame.pack(fill=tk.X)
+
+        tk.Label(control_frame, text="Input String:", font=self.control_font).pack(side=tk.LEFT, padx=(10, 5))
+        self.input_entry = tk.Entry(control_frame, width=30, font=self.control_font)
+        self.input_entry.pack(side=tk.LEFT, padx=5)
+        self.input_entry.insert(0, "ababa")
+
+        self.run_button = tk.Button(control_frame, text="Run", command=self.start_simulation, font=self.control_font)
+        self.run_button.pack(side=tk.LEFT, padx=5)
+        self.reset_button = tk.Button(control_frame, text="Reset", command=self.reset_simulation, font=self.control_font)
+        self.reset_button.pack(side=tk.LEFT, padx=5)
+        
+        tk.Label(control_frame, text="Speed (ms/step):", font=self.control_font).pack(side=tk.LEFT, padx=(20, 5))
+        self.speed_scale = tk.Scale(control_frame, from_=500, to=10, orient=tk.HORIZONTAL, length=150)
+        self.speed_scale.set(200)
+        self.speed_scale.pack(side=tk.LEFT, padx=5)
+
+        # --- Status Frame ---
+        status_frame = tk.Frame(self.master, pady=5)
+        status_frame.pack(fill=tk.X)
+        self.status_label_var = tk.StringVar(value="State: q0")
+        tk.Label(status_frame, textvariable=self.status_label_var, font=self.status_font).pack(side=tk.LEFT, padx=10)
+        self.step_label_var = tk.StringVar(value="Step: 0")
+        tk.Label(status_frame, textvariable=self.step_label_var, font=self.status_font).pack(side=tk.RIGHT, padx=10)
+
+        # --- Canvas for Tape ---
+        self.tape_canvas = tk.Canvas(self.master, bg="white", scrollregion=(-5000, 0, 5000, 200))
+        self.tape_canvas.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.draw_tape()
+
+    def start_simulation(self):
+        input_string = self.input_entry.get()
+        if not self.tm.initialize(input_string):
+            messagebox.showerror("Invalid Input", "Input string can only contain 'a' and 'b'.")
+            return
+
+        self.reset_simulation() # Clear previous state before starting
+        self.tm.initialize(input_string) # Re-initialize with the new string
+        
+        self.run_button.config(state=tk.DISABLED)
+        self.input_entry.config(state=tk.DISABLED)
+        
+        self.run_step()
+
+    def run_step(self):
+        # Update labels before the step for initial state (q0) display
+        self.status_label_var.set(f"State: {self.tm.current_state}")
+        self.step_label_var.set(f"Step: {self.tm.step_count}")
+        self.draw_tape()
+
+        if self.tm.step(): # Perform one step
+            delay = self.speed_scale.get()
+            self.simulation_id = self.master.after(delay, self.run_step)
+        else:
+            # Halted, redraw final state
+            self.draw_tape()
+            self.run_button.config(state=tk.NORMAL)
+            self.input_entry.config(state=tk.NORMAL)
+
+
+    def reset_simulation(self):
+        if self.simulation_id:
+            self.master.after_cancel(self.simulation_id)
+            self.simulation_id = None
+        
+        self.tm.initialize("") # Reset TM to initial state with empty tape
+        self.status_label_var.set("State: q0")
+        self.step_label_var.set("Step: 0")
+        self.draw_tape()
+        self.run_button.config(state=tk.NORMAL)
+        self.input_entry.config(state=tk.NORMAL)
+
+    def draw_tape(self):
+        self.tape_canvas.delete("all")
+        canvas_width = self.tape_canvas.winfo_width()
+        canvas_height = self.tape_canvas.winfo_height()
+        
+        # Calculate the starting cell index to draw to center the head
+        center_x = canvas_width / 2
+        start_cell_index = self.tm.head_position - int(center_x / self.cell_width)
+        end_cell_index = self.tm.head_position + int(center_x / self.cell_width) + 2
+
+        for i in range(start_cell_index, end_cell_index):
+            symbol = self.tm.tape.get(i, self.tm.blank_symbol)
+            
+            # Calculate position for each cell
+            x0 = center_x + (i - self.tm.head_position) * self.cell_width - (self.cell_width / 2)
+            y0 = canvas_height / 2 - self.cell_height / 2
+            x1 = x0 + self.cell_width
+            y1 = y0 + self.cell_height
+            
+            # Draw cell and symbol
+            self.tape_canvas.create_rectangle(x0, y0, x1, y1, outline="black", fill="lightblue")
+            self.tape_canvas.create_text(x0 + self.cell_width/2, y0 + self.cell_height/2,
+                                         text=symbol, font=self.tape_font, fill="black")
+
+            # Draw head indicator
+            if i == self.tm.head_position:
+                head_x = x0 + self.cell_width / 2
+                head_y = y1 + 5
+                self.tape_canvas.create_text(head_x, head_y, text="^", font=("Helvetica", 16, "bold"), anchor=tk.N, fill="red")
+
+
 if __name__ == "__main__":
-    tm = TuringMachine()
-    
-    # Get a single string from the user to test
-    test_string = input("Enter a string to check for palindrome (e.g., abba or ababa): ")
-    
-    # --- Run with detailed verbose output for the user's string ---
-    print(f"\n--- Running detailed simulation for '{test_string}' ---")
-    input("Press Enter to start...")
-    result_verbose = tm.run(test_string, verbose=True, delay=0.2)
-    print(f"\nFinal tape content for '{test_string}': {result_verbose}\n")
-    print("-" * 40)
+    root = tk.Tk()
+    app = TuringMachineGUI(root)
+    root.mainloop()
