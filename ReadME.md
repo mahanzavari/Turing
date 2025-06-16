@@ -1,7 +1,3 @@
-Of course. Here is a comprehensive README file for the provided Python script. It explains the purpose, features, installation, and usage of the Turing Machine simulator.
-
----
-
 # Turing Machine Palindrome Checker
 
 This script provides a command-line simulation of a Turing Machine designed to determine if a given string from the alphabet `{a, b}` is a palindrome.
@@ -163,4 +159,3 @@ The Turing Machine uses the following algorithm to check for palindromes:
     * If the machine is at the beginning and sees a blank symbol (meaning all characters have been successfully matched and erased), it transitions to an "accept" state (`q_yes`), wipes the tape, and writes "YES".
     * If it reaches a reject state at any point, it halts and writes "NO".
 
----
