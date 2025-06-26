@@ -22,27 +22,27 @@ A sophisticated, educational Turing Machine simulator that checks if strings fro
 ### Basic Usage
 ```bash
 # Simple palindrome check
-python turing_machine.py "abba"
+python Turing.py "abba"
 
 # Verbose mode with step-by-step visualization
-python turing_machine.py "abba" -v
+python Turing.py "abba" -v
 
 # Different display styles
-python turing_machine.py "abba" -v -s matrix
-python turing_machine.py "abba" -v -s fancy
-python turing_machine.py "abba" -v -s compact
+python Turing.py "abba" -v -s matrix
+python Turing.py "abba" -v -s fancy
+python Turing.py "abba" -v -s compact
 ```
 
 ### Interactive Mode
 ```bash
 # Launch interactive menu
-python turing_machine.py -i
+python Turing.py -i
 ```
 
 ### Batch Processing
 ```bash
 # Test multiple strings at once
-python turing_machine.py -b "a" "aa" "aba" "abba" "abab"
+python Turing.py -b "a" "aa" "aba" "abba" "abab"
 ```
 
 ## 📋 Command Line Options
@@ -128,7 +128,7 @@ pip install colorama
 
 ### Basic Palindrome Check
 ```bash
-$ python turing_machine.py "abba" -v
+$ python Turing.py "abba" -v
 
 ╔══════════════════════════════════════════════════════════╗
 ║                    TURING MACHINE                        ║
@@ -147,7 +147,7 @@ Next Action: Write 'B', Move R, Go to q1
 
 ### Batch Processing Results
 ```bash
-$ python turing_machine.py -b "a" "aa" "aba" "abba" "abab"
+$ python Turing.py -b "a" "aa" "aba" "abba" "abab"
 
          a → ⠀⠀⠀⠀YES ✓
         aa → ⠀⠀⠀⠀YES ✓
